@@ -1,7 +1,14 @@
 import glob
 from PIL import Image
+import torch as torch
 from torchvision import transforms
 import numpy as np
+
+device = None
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 # dir is directory of images, filetype is the filetype of the images
 def read_images(dir, filetype):
@@ -12,24 +19,16 @@ def read_images(dir, filetype):
 
     return imgs
 
-def distill(data, num_samples=100, width=6, height=6):
-    idxs = np.random.random_integers(0, len(data) - 1, size=num_samples)
-    sample = []
-    for idx in idxs:
-        sample.append(data[idx])
+def stackimg(data, num_samples=40, num_imgs=10):
+    
+    stacked_images = np.zeros((num_samples, num_imgs, 3, 224, 224))
 
-    dsample = np.zeros((num_samples, 3, width, height))
-
-    process = transforms.Compose([transforms.Resize((width, height)), 
+    process = transforms.Compose([transforms.Resize((224, 224)), 
                                     transforms.ToTensor()])
 
-    for i, img in enumerate(sample):
-        dimg = np.asarray(process(img))
-        dsample[i] = dimg
+    for i in range(num_samples):
+        idxs = np.random.random_integers(0, len(data) - 1, size=num_imgs)
+        for j, idx in enumerate(idxs):
+            stacked_images[i, j] = np.asarray(process(data[idx]))
 
-    distilled_data = np.zeros((2, 3, width, height))
-
-    distilled_data[0] = np.mean(dsample, axis=0)
-    distilled_data[1] = np.std(dsample, axis=0)
-
-    return distilled_data
+    return stacked_images

@@ -47,39 +47,82 @@ processed_data_and_labels_dict = {'cifar10' : {'data' : 'data/cifar10.npy', 'lab
                 'visualqa': {'data' : 'data/visualqa.npy', 'label' : 'label/visual_qa.npy'},
                 'worms' : {'data' : 'data/worms.npy', 'label' : 'label/broad_bioimage_benchmark_collection.npy'}
                 }
-"""
+
 if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
-    """
-device = torch.device('cpu')
-    
-def init_model(learning_rate=1e-4, h=(4096, 1024), output_size=12):
+    device = torch.device('cpu')
+
+# def init_model(input_size, h1, h2, output_size, learning_rate):
+#     model = nn.Sequential(
+#         nn.Linear(input_size, h1),
+#         nn.ReLU(),
+#         nn.Linear(h1, h1),
+#         nn.ReLU(),
+#         nn.Linear(h1, h2),
+#         nn.ReLU(),
+#         nn.Linear(h2, output_size),
+#         nn.ReLU(),
+#         nn.Linear(output_size, output_size),
+#         #nn.ReLU(),
+#         nn.Sigmoid()
+#     )
+
+#     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.001)
+#     if torch.cuda.device_count() > 1:
+#         print("Let's use", torch.cuda.device_count(), "GPUs!")
+#         model = nn.DataParallel(model)
+
+#     return model, optimizer
+
+def init_model(learning_rate=1e-3, output_size=12, unfreeze=1):
+    resnext = models.resnext101_32x8d(pretrained=True)
+    resnext.fc = nn.Linear(resnext.fc.in_features, output_size)
+
+    ct = 0
+    for child in resnext.children():
+        ct += 1
+        if ct < unfreeze:
+            for param in child.parameters():
+                param.requires_grad = False
+
     model = nn.Sequential(
-        nn.Conv3d(10, 20, kernel_size=(3, 3, 3), padding=0),
+        nn.Conv2d(30, 3, 3, padding=1),
         nn.ReLU(),
-        nn.MaxPool3d((1, 2, 2)),
-        #111 by 111  
-        nn.Conv3d(20, 40, kernel_size=(1, 3, 3), padding=(0,1,1)),
-        nn.ReLU(),
-        nn.MaxPool3d((1, 2, 2)),
-        #55 by 55
-        nn.Flatten(),
-        nn.Linear(121000, h[0]),
-        nn.ReLU(),
-        nn.Linear(h[0], h[1]),
-        nn.ReLU(),
-        nn.Linear(h[1], output_size),
+        resnext,
         nn.Sigmoid()
     )
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    """
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
-    """
 
-    return model, optimizer
+    return model, optimizer 
+
+def init_model3d(learning_rate=1e-4, output_size=12, unfreeze=1):
+    resnext = models.resnext101_32x8d(pretrained=True)
+    resnext.fc = nn.Linear(resnext.fc.in_features, output_size)
+
+    ct = 0
+    for child in resnext.children():
+        ct += 1
+        if ct < unfreeze:
+            for param in child.parameters():
+                param.requires_grad = False
+
+    model = nn.Sequential(
+        nn.Conv3d(10, 1, (1, 3, 3), padding=(0, 1, 1)),
+        nn.ReLU(),
+        nn.Flatten(1, 2),
+        resnext,
+        nn.Sigmoid()
+    )
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+
+    return model, optimizer     
 
 def train_model(dataset, model, optimizer, epochs=1):
     model = model.to(device=device)
@@ -100,13 +143,16 @@ def train_model(dataset, model, optimizer, epochs=1):
                 print("Iteration %d, loss = %.4f" % (t, loss.item()))
                 print()
 
-        with open('model_custom.pb', 'wb') as f:
-            torch.save(model, f)
-
-        with open("model_progress.txt", "a") as f:
-            f.write(str(e) + "epoch 3d")
-
 def organize_data(inputs, labels):
+    assert inputs.shape[0] == labels.shape[0]
+
+    dataset = []
+    for i in range(inputs.shape[0]):
+        dataset.append((torch.reshape(torch.from_numpy(inputs[i]), (1, 30, 224, 224)), torch.reshape(torch.from_numpy(labels[i]), (1, 12))))
+
+    return dataset
+
+def organize_data3d(inputs, labels):
     assert inputs.shape[0] == labels.shape[0]
 
     dataset = []

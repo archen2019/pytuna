@@ -47,25 +47,27 @@ processed_data_and_labels_dict = {'cifar10' : {'data' : 'data/cifar10.npy', 'lab
                 'visualqa': {'data' : 'data/visualqa.npy', 'label' : 'label/visual_qa.npy'},
                 'worms' : {'data' : 'data/worms.npy', 'label' : 'label/broad_bioimage_benchmark_collection.npy'}
                 }
+
 """
 if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
-    """
+"""
 device = torch.device('cpu')
     
 def init_model(learning_rate=1e-4, h=(4096, 1024), output_size=12):
     model = nn.Sequential(
-        nn.Conv3d(10, 20, kernel_size=(3, 3, 3), padding=0),
+        nn.Flatten(1,2),
+        nn.Conv2d(30, 60, kernel_size=3, padding=0),
         nn.ReLU(),
-        nn.MaxPool3d((1, 2, 2)),
+        nn.MaxPool2d((2, 2)),
         #111 by 111  
-        nn.Conv3d(20, 40, kernel_size=(1, 3, 3), padding=(0,1,1)),
+        nn.Conv2d(60, 120, kernel_size=3, padding=1),
         nn.ReLU(),
-        nn.MaxPool3d((1, 2, 2)),
+        nn.MaxPool2d((2, 2)),
         #55 by 55
         nn.Flatten(),
-        nn.Linear(121000, h[0]),
+        nn.Linear(363000, h[0]),
         nn.ReLU(),
         nn.Linear(h[0], h[1]),
         nn.ReLU(),
@@ -100,11 +102,11 @@ def train_model(dataset, model, optimizer, epochs=1):
                 print("Iteration %d, loss = %.4f" % (t, loss.item()))
                 print()
 
-        with open('model_custom.pb', 'wb') as f:
+        with open('model_custom2d.pb', 'wb') as f:
             torch.save(model, f)
 
         with open("model_progress.txt", "a") as f:
-            f.write(str(e) + "epoch 3d")
+            f.write(str(e) + "epoch 2d")
 
 def organize_data(inputs, labels):
     assert inputs.shape[0] == labels.shape[0]

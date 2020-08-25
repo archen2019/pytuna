@@ -1,6 +1,6 @@
 import numpy as np
 
-file_name = 'label/blood_cell_images.npy'
+file_name = 'label/worms.npy'
 
 #Scaling, Augmentation, Normalization, Centering, Remove Background, Object detection, Denoise, Perturb images, contrast, Dimensionality, Histogram, label one hot encoding
 with open(file_name, 'wb') as f:

@@ -1,1 +1,9 @@
 __pycache__/
+
+*.pb
+stackdata/
+rgbstackdata/
+data/
+label/
+01label/
+sum1label/
